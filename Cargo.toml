@@ -1,0 +1,22 @@
+[package]
+name = "cop"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "Debugs Cassis Order Protocol endpoints: URIs, message streams, hypereffect trees and invoices"
+
+[[bin]]
+name = "cop"
+path = "src/main.rs"
+
+[dependencies]
+base64 = "0.22"
+boa_engine = "0.22"
+cassis-core = { git = "https://github.com/andunieee/cassis", rev = "6f8ba1ea1a71b0d4566b41f55407e355c9db7c26", default-features = false, features = ["node"] }
+clap = { version = "4.6", features = ["derive"] }
+hypereffect = "0.7.0"
+iroh = "1"
+qrcode = { version = "0.14", default-features = false }
+rand = "0.8"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+tokio = { version = "1", features = ["rt-multi-thread", "sync", "time", "macros", "io-util"] }
