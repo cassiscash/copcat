@@ -19,8 +19,81 @@ streams); diagnostics go to stderr, prefixed `copcat:`.
 
 ## Install
 
-Download a binary for your platform from the
-[releases](https://github.com/cassiscash/copcat/releases), or build it:
+Prebuilt CLI binaries are attached to every
+[release](https://github.com/cassiscash/copcat/releases): Linux, macOS and
+Windows, for x86_64 and ARM64. On Linux or macOS, expand the snippet below and
+paste it into bash: it detects your platform, downloads the latest release and
+installs `copcat` into `~/.local/bin` (or `$COPCAT_INSTALL_DIR`), adding it to
+your `PATH` if needed.
+
+<details>
+<summary>Install script (bash)</summary>
+
+```bash
+(
+  set -eu
+
+  repo=cassiscash/copcat
+
+  # Releases name their assets after the Rust target triple.
+  case "$(uname -s)" in
+    Linux)  platform=unknown-linux-gnu ;;
+    Darwin) platform=apple-darwin ;;
+    *) echo "copcat: unsupported OS: $(uname -s); download a binary from https://github.com/$repo/releases" >&2; exit 1 ;;
+  esac
+  case "$(uname -m)" in
+    x86_64|amd64)  arch=x86_64 ;;
+    arm64|aarch64) arch=aarch64 ;;
+    *) echo "copcat: unsupported architecture: $(uname -m); download a binary from https://github.com/$repo/releases" >&2; exit 1 ;;
+  esac
+  target=$arch-$platform
+
+  command -v curl >/dev/null || { echo "copcat: curl is required" >&2; exit 1; }
+  tag=$(curl -fsSIL -o /dev/null -w '%{url_effective}' "https://github.com/$repo/releases/latest")
+  tag=${tag##*/}
+  case "$tag" in
+    v*) ;;
+    *) echo "copcat: no release found for $repo" >&2; exit 1 ;;
+  esac
+  asset=copcat-$tag-$target.tar.gz
+
+  bindir=${COPCAT_INSTALL_DIR:-$HOME/.local/bin}
+  mkdir -p "$bindir"
+
+  tmp=$(mktemp -d)
+  trap 'rm -rf "$tmp"' EXIT
+  curl -fsSL -o "$tmp/$asset" "https://github.com/$repo/releases/download/$tag/$asset"
+  tar -xzf "$tmp/$asset" -C "$tmp"
+  cp "$tmp/copcat-$tag-$target/copcat" "$bindir/copcat"
+  chmod 755 "$bindir/copcat"
+  "$bindir/copcat" --version
+
+  # Add $bindir to the PATH of future shells, unless it is already on it.
+  case ":$PATH:" in
+    *":$bindir:"*) ;;
+    *)
+      case "${SHELL##*/}" in
+        zsh)  rc=$HOME/.zshrc ;;
+        bash) rc=$HOME/.bashrc; [ -f "$HOME/.bash_profile" ] && rc=$HOME/.bash_profile ;;
+        *)    rc=$HOME/.profile ;;
+      esac
+      if ! grep -qsF "$bindir" "$rc"; then
+        printf '\nexport PATH="%s:$PATH"\n' "$bindir" >>"$rc"
+        echo "copcat: added $bindir to PATH in $rc; open a new shell to pick it up" >&2
+      fi
+      ;;
+  esac
+)
+```
+
+</details>
+
+On Windows, download the `copcat-<version>-x86_64-pc-windows-msvc.zip` (or the
+`aarch64-pc-windows-msvc` one) from the releases page and unzip `copcat.exe`
+somewhere on your `%PATH%`. Every archive ships with the README and the release
+page has a `SHA256SUMS` file.
+
+Or build it from source:
 
 ```sh
 cargo install --git https://github.com/cassiscash/copcat
