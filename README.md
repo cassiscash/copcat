@@ -119,6 +119,95 @@ cargo install --git https://github.com/cassiscash/copcat
 
 `copcat help <command>` has the details and examples for each.
 
+## Examples
+
+### Watch `copcat ui` drive a page
+
+[![copcat ui driving a demo page](docs/copcat-ui.gif)](docs/copcat-ui.gif)
+
+Against a demo "Pixel wall" store (2× speed): pressing buttons, changing the colour
+select and typing into inputs, with the page updating in place as the server sends.
+The sidebar is the flow's history; stepping back into it rebuilds the page as it was
+right after that message, read-only, until `live` is picked again.
+
+### Inspect the page a wallet would see
+
+```console
+$ copcat tree '<uri>' --once
+metadata "Luigi's Pizza" — "Wood-fired pizza, Via Roma 12"
+{
+  "order": {
+    "address": ""
+  }
+}
+tree {
+  column page
+    text title "Choose your pizza" h1
+    list menu
+      button margherita "Margherita — $8.50"  ⚡ onPress → selectPizza {"pizza":"margherita"}
+      button pepperoni "Pepperoni — $10.00"  ⚡ onPress → selectPizza {"pizza":"pepperoni"}
+    input address "Delivery address" [order.address = ""]
+    button pay "Pay $8.50" primary (disabled)  ⚡ onPress → pay
+}
+```
+
+`--once` prints the page after it settles; without it, `tree` reprints whenever the
+server changes something.
+
+### Drive a flow with JavaScript
+
+```js
+// order.js
+press("margherita"); settle();
+input("address", "12 Via Roma");
+press("pay"); settle();
+printTree();
+```
+
+```console
+$ copcat run '<uri>' order.js
+metadata "Luigi's Pizza" — "Wood-fired pizza, Via Roma 12"
+{
+  "order": {
+    "address": "12 Via Roma",
+    "pizza": "margherita"
+  }
+}
+tree {
+  column page
+    text title "Choose your pizza" h1
+    list menu
+      button margherita "Margherita — $8.50"  ⚡ onPress → selectPizza {"pizza":"margherita"}
+      button pepperoni "Pepperoni — $10.00"  ⚡ onPress → selectPizza {"pizza":"pepperoni"}
+    input address "Delivery address" [order.address = "12 Via Roma"]
+    button pay "Pay $8.50" primary  ⚡ onPress → pay
+    notice thanks "Paid — your pizza is in the oven." success
+}
+invoice 850 sat (850,000 msat) · expires in 1132d 9h · on bitcoin · direct ✓ · memo "1 × Margherita — $8.50"
+closed: paid
+```
+
+### Check a flow and verify its invoice
+
+```console
+$ copcat check flow.cop
+copcat: 17 message(s), 0 error(s), 0 warning(s), 0 hint(s)
+
+$ copcat invoice flow.cop
+── line 16, from the server, asking to be paid
+invoice       direct · ✓ signatures valid
+amount        850 sat (850,000 msat)
+expires       2030-01-01 00:00:00 UTC (in 1132d 9h)
+hash          3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f
+payee         d04ab232742bb4ab3a1368bd4615e4e6d0224ab71a016baf8520a332c9778737
+networks      bitcoin  XOnlyPubKey 79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798
+description   "1 × Margherita — $8.50"
+memo          "1 × Margherita — $8.50" (from the COP message, unsigned: trust the invoice, not this)
+```
+
+Both read transcripts (or stdin, with `-`) and exit 1 on errors: `check` for anything
+the flow gets wrong, `invoice` for an invoice that does not decode or verify.
+
 ## Transcripts
 
 What `copcat stream` prints and `--record` saves, and what `check`, `replay`,
