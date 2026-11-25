@@ -217,6 +217,8 @@ struct App {
     page_area: Rect,
     side_area: Rect,
     side_offset: usize,
+    /// Whether the keys move in the history rather than on the page.
+    side: bool,
     quit: bool,
 }
 
@@ -242,6 +244,7 @@ impl App {
             page_area: Rect::default(),
             side_area: Rect::default(),
             side_offset: 0,
+            side: false,
             quit: false,
         }
     }
@@ -399,6 +402,10 @@ impl App {
             self.edit_key(k);
             return;
         }
+        if self.side {
+            self.side_key(k);
+            return;
+        }
         match k.code {
             KeyCode::Char('q') => self.quit = true,
             KeyCode::Up | KeyCode::BackTab | KeyCode::Char('k') => self.move_focus(-1),
@@ -410,13 +417,47 @@ impl App {
             }
             KeyCode::Left | KeyCode::Char('h') => self.adjust(-1),
             KeyCode::Right | KeyCode::Char('l') => self.adjust(1),
-            KeyCode::Char('[') | KeyCode::Char('p') => self.step(-1),
-            KeyCode::Char(']') | KeyCode::Char('n') => self.step(1),
-            KeyCode::Home | KeyCode::Char('g') => self.go(Some(0)),
+            KeyCode::Char('[') | KeyCode::Char('p') => {
+                self.side = true;
+                self.step(-1);
+            }
+            KeyCode::Char(']') | KeyCode::Char('n') => {
+                self.side = true;
+                self.step(1);
+            }
+            KeyCode::Home | KeyCode::Char('g') => {
+                self.side = true;
+                self.go(Some(0));
+            }
             KeyCode::End | KeyCode::Char('G') | KeyCode::Esc => self.go(None),
             KeyCode::PageUp => self.scroll = self.scroll.saturating_sub(self.page_area.height / 2),
             KeyCode::PageDown => {
                 self.scroll = self.scroll.saturating_add(self.page_area.height / 2)
+            }
+            KeyCode::Char('a') => self.show_attrs = !self.show_attrs,
+            KeyCode::Char('s') => self.show_signals = !self.show_signals,
+            _ => {}
+        }
+    }
+
+    /// Keys while the history has them: arrows move between entries.
+    fn side_key(&mut self, k: KeyEvent) {
+        let len = self.history().entries.len();
+        let page = (self.side_area.height.saturating_sub(2) as isize).max(1);
+        match k.code {
+            KeyCode::Char('q') => self.quit = true,
+            KeyCode::Up | KeyCode::Char('k' | '[' | 'p') => self.step(-1),
+            KeyCode::Down | KeyCode::Char('j' | ']' | 'n') => self.step(1),
+            KeyCode::PageUp => self.step(-page),
+            KeyCode::PageDown => self.step(page),
+            KeyCode::Home | KeyCode::Char('g') => self.go(Some(0)),
+            KeyCode::End | KeyCode::Char('G') => self.go(Some(len)),
+            KeyCode::Esc => {
+                self.go(None);
+                self.side = false;
+            }
+            KeyCode::Enter | KeyCode::Tab | KeyCode::Right | KeyCode::Char('l') => {
+                self.side = false
             }
             KeyCode::Char('a') => self.show_attrs = !self.show_attrs,
             KeyCode::Char('s') => self.show_signals = !self.show_signals,
@@ -481,17 +522,25 @@ impl App {
         let at = Position::new(m.column, m.row);
         let in_side = self.side_area.contains(at);
         match m.kind {
-            MouseEventKind::ScrollUp if in_side => self.step(-1),
-            MouseEventKind::ScrollDown if in_side => self.step(1),
+            MouseEventKind::ScrollUp if in_side => {
+                self.side = true;
+                self.step(-1);
+            }
+            MouseEventKind::ScrollDown if in_side => {
+                self.side = true;
+                self.step(1);
+            }
             MouseEventKind::ScrollUp => self.scroll = self.scroll.saturating_sub(2),
             MouseEventKind::ScrollDown => self.scroll = self.scroll.saturating_add(2),
             MouseEventKind::Down(MouseButton::Left) if in_side => {
                 let row = (m.row.saturating_sub(self.side_area.y + 1)) as usize + self.side_offset;
                 if m.row > self.side_area.y && m.row + 1 < self.side_area.bottom() {
+                    self.side = true;
                     self.go(Some(row));
                 }
             }
             MouseEventKind::Down(MouseButton::Left) if self.page_area.contains(at) => {
+                self.side = false;
                 let i = (m.row - self.page_area.y + self.scroll) as usize;
                 let col = m.column - self.page_area.x;
                 let Some(row) = self.rows.get(i) else { return };
@@ -825,12 +874,13 @@ impl App {
             Style::new().fg(Color::Green).bold(),
         )));
         let selected = self.pinned.as_ref().map_or(h.entries.len(), |(k, _)| *k);
+        let (title, border) = if self.side {
+            (" history · ↑↓ ", Style::new().fg(Color::Cyan))
+        } else {
+            (" history ", Style::new().fg(MUTED))
+        };
         let list = List::new(items)
-            .block(
-                Block::bordered()
-                    .title(" history ")
-                    .border_style(Style::new().fg(MUTED)),
-            )
+            .block(Block::bordered().title(title).border_style(border))
             .highlight_style(Style::new().add_modifier(Modifier::REVERSED));
         let mut state = ListState::default()
             .with_offset(self.side_offset)
@@ -850,6 +900,11 @@ impl App {
         }
         let (text, style) = match (&self.notice, &self.editing) {
             (Some((n, _)), _) => (n.clone(), Style::new().fg(Color::Yellow)),
+            (None, None) if self.side => (
+                "history · ↑↓ step · Home first · End live · Enter/Tab/→ back to the page · Esc live · q quit"
+                    .into(),
+                Style::new().fg(MUTED),
+            ),
             (None, Some(_)) => (
                 "editing · Enter submit · Esc done · Tab next".into(),
                 Style::new().fg(MUTED),
@@ -863,7 +918,7 @@ impl App {
                 };
                 (
                     format!(
-                        "{state} · ↑↓ move · Enter press/edit · ←→ change · [ ] history · End live · a attrs · s signals · q quit"
+                        "{state} · ↑↓ move · Enter press/edit · ←→ change · [ ] history (then ↑↓) · End live · a attrs · s signals · q quit"
                     ),
                     Style::new().fg(MUTED),
                 )

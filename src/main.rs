@@ -407,7 +407,9 @@ Keys:
   Enter Space       press a button, edit an input, toggle a checkbox
   ← →               change a select, slider or tabs
   Esc               stop editing; otherwise back to live
-  [ ]  (or p n)     one step back or forward in the history
+  [ ]  (or p n)     one step back or forward in the history, which then has
+                    the keys: ↑ ↓ step, PgUp PgDn page, Home End first and
+                    live, Enter Tab → back to the page, Esc back to live
   Home End          the first entry; live
   a s               show all attributes; show the signals
   PgUp PgDn         scroll
