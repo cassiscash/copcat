@@ -1,4 +1,4 @@
-//! The history of a flow, for `cop ui`: every message both ways, each with
+//! The history of a flow, for `copcat ui`: every message both ways, each with
 //! the signals the client held once it was sent or applied, which includes
 //! what the user had typed since the message before. Consecutive entries
 //! with the same signals share one snapshot.

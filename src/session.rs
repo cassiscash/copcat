@@ -155,7 +155,7 @@ impl Session {
     fn note(&mut self, message: String) {
         match &mut self.notes {
             Some(n) => n.push(message),
-            None => eprintln!("cop: {message}"),
+            None => eprintln!("copcat: {message}"),
         }
     }
 
@@ -334,7 +334,7 @@ impl Session {
             Some(n) => n.extend(diags),
             None if self.verbose => {
                 for d in diags {
-                    eprintln!("cop: {d}");
+                    eprintln!("copcat: {d}");
                 }
             }
             None => {}

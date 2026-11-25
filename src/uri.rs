@@ -9,7 +9,7 @@
 //! means anything, and the fragment is `&`-separated `key=value` pairs
 //! where a missing `=`, an empty key, a repeated key or invalid UTF-8
 //! makes the whole URI invalid. What the spec says to ignore is kept in
-//! [`CopUri::ignored`], so `cop parse` can point it out.
+//! [`CopUri::ignored`], so `copcat parse` can point it out.
 
 use base64::Engine;
 use rand::RngCore;

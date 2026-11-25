@@ -125,7 +125,7 @@ async fn run(
         .map_err(|e| format!("cannot bind an iroh endpoint: {e}"))?;
     if verbose {
         eprintln!(
-            "cop: dialing {} as {}{}",
+            "copcat: dialing {} as {}{}",
             uri.endpoint,
             endpoint.id(),
             uri.relay

@@ -1,4 +1,4 @@
-//! `cop check`: whether a transcript follows the spec, message by message.
+//! `copcat check`: whether a transcript follows the spec, message by message.
 //!
 //! Errors are what the spec forbids or a peer must reject; warnings are
 //! what peers ignore or what is likely a mistake; hints are advice from the
@@ -59,7 +59,7 @@ struct Checker {
     closed: Option<usize>,
     asked: Vec<Asked>,
     page: Page,
-    /// A script for `cop serve`, which has no hello: the server's side only.
+    /// A script for `copcat serve`, which has no hello: the server's side only.
     script: bool,
     /// Whether a message before the hello was reported already: once is
     /// enough.
@@ -78,7 +78,7 @@ pub fn check(entries: &[Entry]) -> Vec<Finding> {
         c.at(
             1,
             Level::Hint,
-            "no client hello: checking this as a script for `cop serve`, which waits for the \
+            "no client hello: checking this as a script for `copcat serve`, which waits for the \
              hello before sending anything",
         );
     }

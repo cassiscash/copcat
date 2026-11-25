@@ -1,12 +1,12 @@
 [package]
-name = "cop"
+name = "copcat"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
 description = "Debugs Cassis Order Protocol endpoints: URIs, message streams, hypereffect trees and invoices"
 
 [[bin]]
-name = "cop"
+name = "copcat"
 path = "src/main.rs"
 
 [dependencies]

@@ -1,15 +1,15 @@
-//! cop: debugs Cassis Order Protocol endpoints from the command line.
+//! copcat: debugs Cassis Order Protocol endpoints from the command line.
 //!
 //! ```text
-//! cop <address>                     the messages of a flow, as a transcript
-//! cop tree <address>                its metadata, signals, tree and invoices
-//! cop ui <address>                  the same, interactive, with the history
-//! cop action|press <address> ...    fires an action, or presses a button
-//! cop run <address> [script.js]     drives a flow with a script
-//! cop parse|build                   reads and writes cop:// URIs
-//! cop invoice [input]               decodes and verifies Cassis invoices
-//! cop replay|check <transcript>     renders or lints a recorded flow
-//! cop serve <transcript>            plays a scripted merchant
+//! copcat <address>                     the messages of a flow, as a transcript
+//! copcat tree <address>                its metadata, signals, tree and invoices
+//! copcat ui <address>                  the same, interactive, with the history
+//! copcat action|press <address> ...    fires an action, or presses a button
+//! copcat run <address> [script.js]     drives a flow with a script
+//! copcat parse|build                   reads and writes cop:// URIs
+//! copcat invoice [input]               decodes and verifies Cassis invoices
+//! copcat replay|check <transcript>     renders or lints a recorded flow
+//! copcat serve <transcript>            plays a scripted merchant
 //! ```
 
 mod check;
@@ -41,7 +41,7 @@ use uri::CopUri;
 
 #[derive(Parser)]
 #[command(
-    name = "cop",
+    name = "copcat",
     version,
     about = "Debugs Cassis Order Protocol endpoints: URIs, message streams, hypereffect trees and invoices",
     long_about = "Debugs Cassis Order Protocol (COP) endpoints: URIs, message streams, \
@@ -67,23 +67,23 @@ struct Cli {
 
 const OVERVIEW: &str = "\
 Commands at a glance:
-  cop <address>                         stream a flow (same as `cop stream`)
-  cop tree <address> --once             what a wallet would show, once it settles
-  cop ui <address>                      the same, interactive, with the history of the flow
-  cop press <address> pay --input address='221B Baker St' --tree
-  cop run <address> -e 'press(\"margherita\"); printInvoice(waitInvoice())'
-  cop parse 'cop://…#table=12'          validate a URI and show the hello it makes
-  cop build <endpoint-id> -p name='Luigi' --qr
-  cop invoice invoice.json              decode and verify a Cassis invoice
-  cop stream <address> --record flow.cop; cop check flow.cop; cop replay flow.cop
-  cop serve flow.cop --qr               play a scripted merchant to wallets
+  copcat <address>                         stream a flow (same as `copcat stream`)
+  copcat tree <address> --once             what a wallet would show, once it settles
+  copcat ui <address>                      the same, interactive, with the history of the flow
+  copcat press <address> pay --input address='221B Baker St' --tree
+  copcat run <address> -e 'press(\"margherita\"); printInvoice(waitInvoice())'
+  copcat parse 'cop://…#table=12'          validate a URI and show the hello it makes
+  copcat build <endpoint-id> -p name='Luigi' --qr
+  copcat invoice invoice.json              decode and verify a Cassis invoice
+  copcat stream <address> --record flow.cop; copcat check flow.cop; copcat replay flow.cop
+  copcat serve flow.cop --qr               play a scripted merchant to wallets
 
-Transcripts are what `cop stream` prints and --record saves: one message a line, `> `
+Transcripts are what `copcat stream` prints and --record saves: one message a line, `> `
 for the client and `< ` for the server, `#` comments, and `@sleep MS` pauses (for
 serve). Lines without a prefix take the direction of their tag.
 
 For agents: --json makes every command print JSON (one object a line when it
-streams). Diagnostics go to stderr, prefixed `cop:`.
+streams). Diagnostics go to stderr, prefixed `copcat:`.
 
 Exit status: 0 on success; 1 on errors (connection failures, invalid URIs, invoices
 that do not verify, transcripts with errors); 2 on bad usage.";
@@ -259,15 +259,15 @@ enum Command {
 
 const STREAM_EXAMPLES: &str = "\
 Examples:
-  cop stream 'cop://5f1c…0a9b#name=Luigi%27s%20Pizza'
-  cop stream example.com/order/123 --idle 3000 --record flow.cop
-  cop stream <uri> --until invoice --json
-  cop stream <uri> --session f1K9xQ2v8Tn4LmZp7Rb3wq --force-resume
-  cop stream <uri> --type button --actions";
+  copcat stream 'cop://5f1c…0a9b#name=Luigi%27s%20Pizza'
+  copcat stream example.com/order/123 --idle 3000 --record flow.cop
+  copcat stream <uri> --until invoice --json
+  copcat stream <uri> --session f1K9xQ2v8Tn4LmZp7Rb3wq --force-resume
+  copcat stream <uri> --type button --actions";
 
 const TREE_EXAMPLE: &str = "\
 Example:
-  $ cop tree 'cop://5f1c…0a9b#name=Luigi%27s%20Pizza' --once
+  $ copcat tree 'cop://5f1c…0a9b#name=Luigi%27s%20Pizza' --once
   metadata \"Luigi's Pizza\" — \"Wood-fired pizza, Via Roma 12\"
   {}
   tree {
@@ -284,14 +284,14 @@ how the flow ended.";
 
 const ACTION_EXAMPLES: &str = "\
 Examples:
-  cop action <uri> selectPizza --payload '{\"pizza\":\"pepperoni\"}'
-  cop action <uri> pay --signals '{\"order\":{\"address\":\"221B Baker St\"}}' --tree";
+  copcat action <uri> selectPizza --payload '{\"pizza\":\"pepperoni\"}'
+  copcat action <uri> pay --signals '{\"order\":{\"address\":\"221B Baker St\"}}' --tree";
 
 const PRESS_EXAMPLES: &str = "\
 Examples:
-  cop press <uri> pepperoni
-  cop press <uri> pay --input address='221B Baker St' --tree
-  cop press <uri> search --event onSubmit --input q='\"margherita\"'
+  copcat press <uri> pepperoni
+  copcat press <uri> pay --input address='221B Baker St' --tree
+  copcat press <uri> search --event onSubmit --input q='\"margherita\"'
 
 Unlike `action`, this runs the element's own handler: its payload, patches and
 indicator, and nothing at all if the element is hidden or disabled. Only the
@@ -301,15 +301,15 @@ macro_rules! run_examples {
     () => {
         "\
 Examples:
-  cop run <uri> order.js
-  cop run <uri> -e 'press(\"pepperoni\"); settle(); printTree()'
-  cop run <uri> -e '
+  copcat run <uri> order.js
+  copcat run <uri> -e 'press(\"pepperoni\"); settle(); printTree()'
+  copcat run <uri> -e '
     press(\"pepperoni\"); settle();
     press(\"chili\"); settle();
     input(\"address\", \"221B Baker St\");
     press(\"pay\");
     printInvoice(waitInvoice())'
-  cop run <refund-uri> -e \"
+  copcat run <refund-uri> -e \"
     const r = waitInvoiceRequest();
     print(r.amount, r.networks);
     sendInvoice($(cat my-invoice.json))\""
@@ -348,11 +348,11 @@ The script runs once the server has sent its first page and gone quiet. Its help
   waitInvoice(ms?)                    waits for the next invoice, returns it
   waitInvoiceRequest(ms?)             waits for the next invoicerequest, returns it
   sendInvoice(invoice)                answers an invoicerequest with an invoice object
-  decodeInvoice(invoice)              what `cop invoice --json` says of an invoice
+  decodeInvoice(invoice)              what `copcat invoice --json` says of an invoice
   closeReason()                       undefined while open, else the close reason
   print(...), console.log(...)        prints, objects as JSON
-  printTree()                         prints the flow as `cop tree` does
-  printInvoice(inv?)                  prints an invoice as `cop invoice` does
+  printTree()                         prints the flow as `copcat tree` does
+  printInvoice(inv?)                  prints an invoice as `copcat invoice` does
 
 Each message reaches wait() already applied, so the other helpers show the state
 right after it. Waits throw after their timeout (--timeout by default) or if the flow
@@ -365,21 +365,21 @@ with -e, e.g. -e \"const inv = $(cat inv.json); sendInvoice(inv)\".
 
 const PARSE_EXAMPLES: &str = "\
 Examples:
-  cop parse 'cop://5f1c9d0a27e4b6c38d2f71a09e4b5c6d8a3f2e1b0c9d8e7f6a5b4c3d2e1f0a9b#table=12'
-  cop parse example.com/order/123
-  cop parse <uri> --session f1K9xQ2v8Tn4LmZp7Rb3wq --force-resume --json";
+  copcat parse 'cop://5f1c9d0a27e4b6c38d2f71a09e4b5c6d8a3f2e1b0c9d8e7f6a5b4c3d2e1f0a9b#table=12'
+  copcat parse example.com/order/123
+  copcat parse <uri> --session f1K9xQ2v8Tn4LmZp7Rb3wq --force-resume --json";
 
 const BUILD_EXAMPLES: &str = "\
 Examples:
-  cop build 5f1c9d0a27e4b6c38d2f71a09e4b5c6d8a3f2e1b0c9d8e7f6a5b4c3d2e1f0a9b -p table=12 -p \"name=Luigi's Pizza\"
-  cop build <endpoint-id> --relay https://relay.example.com --qr --html";
+  copcat build 5f1c9d0a27e4b6c38d2f71a09e4b5c6d8a3f2e1b0c9d8e7f6a5b4c3d2e1f0a9b -p table=12 -p \"name=Luigi's Pizza\"
+  copcat build <endpoint-id> --relay https://relay.example.com --qr --html";
 
 const INVOICE_EXAMPLES: &str = "\
 Examples:
-  cop invoice invoice.json
-  cop invoice flow.cop                  every invoice and invoicerequest in a transcript
-  cop stream <uri> --until invoice | cop invoice
-  cop invoice '{\"payment_hash\":\"…\",\"amount_msat\":10750000,…}' --json
+  copcat invoice invoice.json
+  copcat invoice flow.cop                  every invoice and invoicerequest in a transcript
+  copcat stream <uri> --until invoice | copcat invoice
+  copcat invoice '{\"payment_hash\":\"…\",\"amount_msat\":10750000,…}' --json
 
 Inputs may be a bare Cassis invoice, an `invoice` message body ({\"invoice\":…,
 \"memo\":…}), a message line, or a transcript. Amount and payee are read from the
@@ -387,12 +387,12 @@ invoice, never from the memo. Exits 1 if any invoice fails to decode or verify."
 
 const REPLAY_EXAMPLES: &str = "\
 Examples:
-  cop replay flow.cop
-  cop replay flow.cop --each
-  cop replay flow.cop --until 12 --json";
+  copcat replay flow.cop
+  copcat replay flow.cop --each
+  copcat replay flow.cop --until 12 --json";
 
 const UI_HELP: &str = "\
-The page is what `cop tree` prints, with the controls usable as in a wallet: type
+The page is what `copcat tree` prints, with the controls usable as in a wallet: type
 into inputs, press buttons, toggle checkboxes, change selects, sliders and tabs.
 Bound signals are written and handlers run as a wallet would; the page changes in
 place as the server sends.
@@ -417,13 +417,13 @@ Keys:
 The mouse works too: click rows, options, tabs and slider bars, and the history.
 
 Example:
-  cop ui <uri> --record flow.cop";
+  copcat ui <uri> --record flow.cop";
 
 const CHECK_EXAMPLES: &str = "\
 Examples:
-  cop check flow.cop
-  cop stream <uri> --idle 3000 | cop check -
-  cop check flow.cop --strict --json
+  copcat check flow.cop
+  copcat stream <uri> --idle 3000 | copcat check -
+  copcat check flow.cop --strict --json
 
 Checks the hello (session entropy, params, force_resume), message directions and
 order, metadata mode, invoice and invoicerequest fields, Cassis invoice signatures,
@@ -439,7 +439,7 @@ Example:
   > action {\"name\":\"pay\"}
   @sleep 300
   < invoice {\"invoice\":{…},\"memo\":\"1 × flat white\"}
-  $ cop serve till.cop -p till=2 --qr
+  $ copcat serve till.cop -p till=2 --qr
 
 The first line printed is `# cop://…`, the URI to connect to. `<` lines are sent,
 `>` lines are waited for (same tag; for actions, same name and payload if given),
@@ -557,7 +557,7 @@ struct After {
     /// Close the connection after this long without messages, in milliseconds
     #[arg(long, value_name = "MS", default_value_t = 1000)]
     idle: u64,
-    /// Print the page at the end, as `cop tree` does
+    /// Print the page at the end, as `copcat tree` does
     #[arg(long)]
     tree: bool,
 }
@@ -609,7 +609,7 @@ fn main() -> ExitCode {
         }) => tree_cmd(&target, idle, debounce, once, settle, g),
         Some(Command::Ui { target }) => (|| {
             if !std::io::stdout().is_terminal() {
-                return Err("cop ui needs a terminal; `cop tree` prints the same".to_string());
+                return Err("copcat ui needs a terminal; `copcat tree` prints the same".to_string());
             }
             ui::run(connect_quiet(&target, Echo::Off, false)?, g.max_text)
         })(),
@@ -679,20 +679,20 @@ fn main() -> ExitCode {
         Ok(()) => ExitCode::SUCCESS,
         Err(e) => {
             if !e.is_empty() {
-                eprintln!("cop: {e}");
+                eprintln!("copcat: {e}");
             }
             ExitCode::FAILURE
         }
     }
 }
 
-/// Writes to standard output. A closed pipe, as in `cop … | head`, ends
+/// Writes to standard output. A closed pipe, as in `copcat … | head`, ends
 /// the program quietly.
 pub fn out(text: &str) {
     let mut o = std::io::stdout().lock();
     if let Err(e) = o.write_all(text.as_bytes()).and_then(|()| o.flush()) {
         if e.kind() != std::io::ErrorKind::BrokenPipe {
-            eprintln!("cop: cannot write the output: {e}");
+            eprintln!("copcat: cannot write the output: {e}");
             std::process::exit(1);
         }
         std::process::exit(0);
@@ -769,7 +769,7 @@ fn resolve(
     }
     let r = web::resolve(address)?;
     if verbose {
-        eprintln!("cop: {} publishes {}", r.final_url, r.href);
+        eprintln!("copcat: {} publishes {}", r.final_url, r.href);
     }
     Ok((r.uri.clone(), Some(r)))
 }
@@ -800,7 +800,7 @@ fn make_hello(
     let token = h.session.clone().unwrap_or_else(uri::new_session);
     if h.force_resume && h.session.is_none() {
         eprintln!(
-            "cop: --force-resume with a fresh session: the server should close with session_not_found"
+            "copcat: --force-resume with a fresh session: the server should close with session_not_found"
         );
     }
     let hello = session::hello(&uri, &token, h.force_resume);
@@ -894,14 +894,14 @@ fn closed(s: &Session, reason: Option<String>, g: &Global) -> Result<(), String>
         (_, Some(r)) => Err(format!("the flow ended: {r}")),
         (Some(Some(r)), None) => {
             if r == "session_not_found" {
-                eprintln!("cop: the server does not know this session (session_not_found)");
+                eprintln!("copcat: the server does not know this session (session_not_found)");
             } else {
-                eprintln!("cop: the server closed the flow: {r}");
+                eprintln!("copcat: the server closed the flow: {r}");
             }
             Ok(())
         }
         _ => {
-            eprintln!("cop: the server closed the flow");
+            eprintln!("copcat: the server closed the flow");
             Ok(())
         }
     }
@@ -1141,7 +1141,7 @@ fn press_cmd(
     }
     if !s.page.client.contains(id) {
         return Err(format!(
-            "no element {id}; `cop tree --once` shows the ones there are"
+            "no element {id}; `copcat tree --once` shows the ones there are"
         ));
     }
     if !s.trigger(id, event) {
@@ -1576,7 +1576,7 @@ fn replay_cmd(
                 page.receive_line(line);
                 for d in page.take_diagnostics() {
                     if verbose {
-                        eprintln!("cop: line {}: {d}", e.no);
+                        eprintln!("copcat: line {}: {d}", e.no);
                     }
                 }
                 if each {
@@ -1676,7 +1676,7 @@ fn check_cmd(file: &Path, strict: bool, g: &Global) -> Result<(), String> {
     );
     if !g.json {
         eprintln!(
-            "cop: {} message(s), {errors} error(s), {warnings} warning(s), {hints} hint(s)",
+            "copcat: {} message(s), {errors} error(s), {warnings} warning(s), {hints} hint(s)",
             entries.len()
         );
     }

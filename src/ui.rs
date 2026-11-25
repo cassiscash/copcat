@@ -1,4 +1,4 @@
-//! `cop ui`: the tree of `cop tree`, live and interactive in the terminal.
+//! `copcat ui`: the tree of `copcat tree`, live and interactive in the terminal.
 //!
 //! The page is the same raw listing, one line an element with its type, id,
 //! what it shows and its handlers, except that controls are widgets: inputs
@@ -278,7 +278,7 @@ impl App {
     }
 
     fn history(&self) -> &History {
-        self.s.history.as_ref().expect("cop ui keeps a history")
+        self.s.history.as_ref().expect("copcat ui keeps a history")
     }
 
     fn page(&self) -> &Page {

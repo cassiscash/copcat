@@ -1,4 +1,4 @@
-//! `cop run`: a JavaScript script, on the boa engine, driving one flow.
+//! `copcat run`: a JavaScript script, on the boa engine, driving one flow.
 //!
 //! The script runs once the server has sent its first page and gone quiet.
 //! Every helper is synchronous: the ones that wait (`wait`, `waitInvoice`,
@@ -275,7 +275,7 @@ fn select(filter: &JsValue, ctx: &mut Context) -> JsResult<Vec<Value>> {
 // --- invoices ----------------------------------------------------------------
 
 /// An invoice as scripts see it: `{invoice, memo, summary}`, where
-/// `summary` is what `cop invoice --json` prints.
+/// `summary` is what `copcat invoice --json` prints.
 fn offer_json(raw: &Value, memo: Option<&str>) -> Value {
     json!({
         "invoice": raw,
@@ -582,7 +582,7 @@ fn send_invoice(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<Js
     Ok(JsValue::undefined())
 }
 
-/// `decodeInvoice(invoice)`: what `cop invoice --json` says of an invoice
+/// `decodeInvoice(invoice)`: what `copcat invoice --json` says of an invoice
 /// object.
 fn decode_invoice(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
     let raw = from_js(args.get_or_undefined(0), ctx)?.unwrap_or_default();
@@ -628,7 +628,7 @@ fn eprint(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue>
     Ok(JsValue::undefined())
 }
 
-/// `printTree()`: prints the flow as `cop tree` does.
+/// `printTree()`: prints the flow as `copcat tree` does.
 fn print_tree(_: &JsValue, _: &[JsValue], _: &mut Context) -> JsResult<JsValue> {
     let text = with(|h| view::snapshot(&h.session.page, &h.style));
     crate::out(&text);
@@ -636,7 +636,7 @@ fn print_tree(_: &JsValue, _: &[JsValue], _: &mut Context) -> JsResult<JsValue> 
 }
 
 /// `printInvoice(invoice?)`: prints an invoice (the latest by default) as
-/// `cop invoice` does.
+/// `copcat invoice` does.
 fn print_invoice(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
     let given = from_js(args.get_or_undefined(0), ctx)?;
     let text = with(|h| {

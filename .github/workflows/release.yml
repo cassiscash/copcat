@@ -1,4 +1,4 @@
-# Builds cop for every platform on `v*` tags and publishes the binaries as a
+# Builds copcat for every platform on `v*` tags and publishes the binaries as a
 # GitHub release. Run it by hand (workflow_dispatch) to only build them.
 name: release
 
@@ -37,16 +37,16 @@ jobs:
       - name: package
         shell: bash
         run: |
-          name="cop-${GITHUB_REF_NAME}-${{ matrix.target }}"
-          [ "$GITHUB_REF_TYPE" = tag ] || name="cop-${GITHUB_SHA::7}-${{ matrix.target }}"
+          name="copcat-${GITHUB_REF_NAME}-${{ matrix.target }}"
+          [ "$GITHUB_REF_TYPE" = tag ] || name="copcat-${GITHUB_SHA::7}-${{ matrix.target }}"
           mkdir "$name"
           cp README.md "$name/"
           if [[ "${{ matrix.target }}" == *windows* ]]; then
-            cp "target/${{ matrix.target }}/release/cop.exe" "$name/"
+            cp "target/${{ matrix.target }}/release/copcat.exe" "$name/"
             7z a "$name.zip" "$name" > /dev/null
             echo "ASSET=$name.zip" >> "$GITHUB_ENV"
           else
-            cp "target/${{ matrix.target }}/release/cop" "$name/"
+            cp "target/${{ matrix.target }}/release/copcat" "$name/"
             tar czf "$name.tar.gz" "$name"
             echo "ASSET=$name.tar.gz" >> "$GITHUB_ENV"
           fi

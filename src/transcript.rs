@@ -1,4 +1,4 @@
-//! Transcripts: a flow written down, one message a line, as `cop stream`
+//! Transcripts: a flow written down, one message a line, as `copcat stream`
 //! prints it and `--record` saves it.
 //!
 //! ```text
@@ -12,7 +12,7 @@
 //! `> ` is the client, `< ` the server. Without a prefix the direction is
 //! the tag's: `hello` and `action` are the client's, anything else the
 //! server's. Blank lines and `#` comments are skipped, and `@sleep MS` is a
-//! pause for `cop serve`.
+//! pause for `copcat serve`.
 
 use hypereffect::message::parse_line;
 

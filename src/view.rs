@@ -230,7 +230,7 @@ fn node_into(out: &mut String, n: &ResolvedTree, depth: usize, client: &Client, 
 
 /// The one or two attributes that say what an element shows, the signal
 /// it edits and its state (hidden, disabled, closed). `interactive` leaves
-/// out what `cop ui` draws as a widget: the bound value and the options of
+/// out what `copcat ui` draws as a widget: the bound value and the options of
 /// a select.
 pub fn describe(n: &ResolvedTree, client: &Client, st: &Style, interactive: bool) -> Vec<String> {
     let a = &n.attrs;

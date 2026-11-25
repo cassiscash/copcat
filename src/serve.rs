@@ -1,4 +1,4 @@
-//! `cop serve`: a scripted merchant. Every client that connects gets the
+//! `copcat serve`: a scripted merchant. Every client that connects gets the
 //! transcript played to it: `<` lines are sent, `>` lines are waited for
 //! (the client must send a message with that tag, and for an action, that
 //! name), `@sleep` pauses. A `hello` is always waited for before anything
@@ -50,7 +50,7 @@ async fn run(o: Opts) -> Result<(), String> {
         .await
         .is_err()
     {
-        eprintln!("cop: not online after 10s (no relay?); serving anyway");
+        eprintln!("copcat: not online after 10s (no relay?); serving anyway");
     }
     let uri = crate::uri::CopUri {
         endpoint: endpoint.id().to_string(),
@@ -69,7 +69,7 @@ async fn run(o: Opts) -> Result<(), String> {
     if o.qr {
         eprint!("{}", crate::qr(&uri.to_string())?);
     }
-    eprintln!("cop: serving {} step(s) on {uri}", o.script.len());
+    eprintln!("copcat: serving {} step(s) on {uri}", o.script.len());
 
     let script = Arc::new(o.script);
     let counter = Arc::new(AtomicUsize::new(0));
@@ -83,7 +83,7 @@ async fn run(o: Opts) -> Result<(), String> {
         let flow = async move {
             let result = async {
                 let conn = incoming.await.map_err(|e| format!("cannot accept: {e}"))?;
-                eprintln!("cop: [{n}] {} connected", conn.remote_id());
+                eprintln!("copcat: [{n}] {} connected", conn.remote_id());
                 let (send, recv) = conn
                     .accept_bi()
                     .await
@@ -98,7 +98,7 @@ async fn run(o: Opts) -> Result<(), String> {
                 conn.close(0u32.into(), b"done");
                 match r {
                     Err(e) if left => {
-                        eprintln!("cop: [{n}] the client left ({e})");
+                        eprintln!("copcat: [{n}] the client left ({e})");
                         Ok(())
                     }
                     r => r,
@@ -106,8 +106,8 @@ async fn run(o: Opts) -> Result<(), String> {
             }
             .await;
             match result {
-                Ok(()) => eprintln!("cop: [{n}] flow over"),
-                Err(e) => eprintln!("cop: [{n}] {e}"),
+                Ok(()) => eprintln!("copcat: [{n}] flow over"),
+                Err(e) => eprintln!("copcat: [{n}] {e}"),
             }
         };
         if o.once {
@@ -176,7 +176,7 @@ async fn play(
                         break;
                     }
                     eprintln!(
-                        "cop: [{n}] waiting for line {} ({}), skipping what the client sent",
+                        "copcat: [{n}] waiting for line {} ({}), skipping what the client sent",
                         e.no,
                         crate::style::clip(line, 60)
                     );
@@ -192,7 +192,7 @@ async fn play(
                     };
                     print(&got);
                     if !got.starts_with("hello ") {
-                        eprintln!("cop: [{n}] the client's first message is not a hello");
+                        eprintln!("copcat: [{n}] the client's first message is not a hello");
                     }
                     greeted = true;
                 }
@@ -213,7 +213,7 @@ async fn play(
         let _ = tokio::time::timeout(Duration::from_secs(2), send.stopped()).await;
         return Ok(());
     }
-    eprintln!("cop: [{n}] script done; echoing the client until it hangs up");
+    eprintln!("copcat: [{n}] script done; echoing the client until it hangs up");
     while let Some(got) = read(&mut lines).await? {
         print(&got);
     }
