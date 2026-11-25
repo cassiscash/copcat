@@ -61,7 +61,7 @@ pub fn snapshot_json(page: &Page) -> Value {
 
 /// `metadata "name" — "description" single_use`, or nothing before the
 /// server sends any.
-fn metadata(page: &Page, st: &Style) -> String {
+pub fn metadata(page: &Page, st: &Style) -> String {
     let m = page.client.metadata();
     let mut parts = Vec::new();
     parts.extend(m.name.as_deref().map(|n| st.bold(&quote(n, st.max_text))));
@@ -88,7 +88,7 @@ fn metadata(page: &Page, st: &Style) -> String {
 }
 
 /// The invoice to pay, the `invoicerequest`s, and the end of the flow.
-fn cop(page: &Page, st: &Style) -> String {
+pub fn cop(page: &Page, st: &Style) -> String {
     let mut out = String::new();
     if let Some(o) = page.invoice() {
         let _ = writeln!(
@@ -206,6 +206,33 @@ pub fn render(tree: &[ResolvedTree], client: &Client, st: &Style) -> String {
 }
 
 fn node_into(out: &mut String, n: &ResolvedTree, depth: usize, client: &Client, st: &Style) {
+    let parts = describe(n, client, st, false);
+    let indent = "  ".repeat(depth);
+    let _ = write!(
+        out,
+        "{indent}{} {}",
+        st.bold(n.component.name()),
+        st.dim(&n.id)
+    );
+    for p in &parts {
+        out.push(' ');
+        out.push_str(p);
+    }
+    for (event, h) in handlers(n.component, &n.attrs) {
+        let _ = write!(out, "  {}", st.yellow(&format!("⚡ {event} →")));
+        out.push_str(&handler(h, st));
+    }
+    out.push('\n');
+    for c in &n.children {
+        node_into(out, c, depth + 1, client, st);
+    }
+}
+
+/// The one or two attributes that say what an element shows, the signal
+/// it edits and its state (hidden, disabled, closed). `interactive` leaves
+/// out what `cop ui` draws as a widget: the bound value and the options of
+/// a select.
+pub fn describe(n: &ResolvedTree, client: &Client, st: &Style, interactive: bool) -> Vec<String> {
     let a = &n.attrs;
     let s = |k: &str| a.get(k).and_then(Value::as_str).filter(|s| !s.is_empty());
     let q = |t: &str| quote(t, st.max_text);
@@ -254,7 +281,7 @@ fn node_into(out: &mut String, n: &ResolvedTree, depth: usize, client: &Client, 
             let get = |k| a.get(k).map_or("?".into(), num);
             parts.push(format!("{}..{}", get("min"), get("max")))
         }
-        Component::Select => {
+        Component::Select if !interactive => {
             let opts: Vec<&str> = a
                 .get("options")
                 .and_then(Value::as_array)
@@ -267,7 +294,7 @@ fn node_into(out: &mut String, n: &ResolvedTree, depth: usize, client: &Client, 
         _ => {}
     }
     // The signal a control or tabs edit, with its value.
-    if let Some(path) = s("bind") {
+    if let Some(path) = s("bind").filter(|_| !interactive) {
         let v = client.value(path).map_or("null".into(), compact);
         let v = clip(&v, 2 * st.max_text);
         parts.push(st.cyan(&format!("[{path} = {v}]")));
@@ -281,26 +308,7 @@ fn node_into(out: &mut String, n: &ResolvedTree, depth: usize, client: &Client, 
     if n.component == Component::Dialog && a.get("open") == Some(&Value::Bool(false)) {
         parts.push(st.dim("(closed)"));
     }
-
-    let indent = "  ".repeat(depth);
-    let _ = write!(
-        out,
-        "{indent}{} {}",
-        st.bold(n.component.name()),
-        st.dim(&n.id)
-    );
-    for p in &parts {
-        out.push(' ');
-        out.push_str(p);
-    }
-    for (event, h) in handlers(n.component, a) {
-        let _ = write!(out, "  {}", st.yellow(&format!("⚡ {event} →")));
-        out.push_str(&handler(h, st));
-    }
-    out.push('\n');
-    for c in &n.children {
-        node_into(out, c, depth + 1, client, st);
-    }
+    parts
 }
 
 /// The handlers an element has, as `(attribute, handler object)`.
@@ -321,7 +329,7 @@ pub fn fires_actions(component: Component, attrs: &Map<String, Value>) -> bool {
 }
 
 /// A handler as ` action payload`, ` patch{keys}` and ` open url`.
-fn handler(h: &Map<String, Value>, st: &Style) -> String {
+pub fn handler(h: &Map<String, Value>, st: &Style) -> String {
     let mut out = String::new();
     if let Some(a) = h.get("action").and_then(Value::as_str) {
         let _ = write!(out, " {}", st.green(a));

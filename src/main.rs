@@ -3,6 +3,7 @@
 //! ```text
 //! cop <address>                     the messages of a flow, as a transcript
 //! cop tree <address>                its metadata, signals, tree and invoices
+//! cop ui <address>                  the same, interactive, with the history
 //! cop action|press <address> ...    fires an action, or presses a button
 //! cop run <address> [script.js]     drives a flow with a script
 //! cop parse|build                   reads and writes cop:// URIs
@@ -12,6 +13,7 @@
 //! ```
 
 mod check;
+mod history;
 mod invoice;
 mod link;
 mod page;
@@ -20,6 +22,7 @@ mod serve;
 mod session;
 mod style;
 mod transcript;
+mod ui;
 mod uri;
 mod view;
 mod web;
@@ -66,6 +69,7 @@ const OVERVIEW: &str = "\
 Commands at a glance:
   cop <address>                         stream a flow (same as `cop stream`)
   cop tree <address> --once             what a wallet would show, once it settles
+  cop ui <address>                      the same, interactive, with the history of the flow
   cop press <address> pay --input address='221B Baker St' --tree
   cop run <address> -e 'press(\"margherita\"); printInvoice(waitInvoice())'
   cop parse 'cop://…#table=12'          validate a URI and show the hello it makes
@@ -111,6 +115,12 @@ enum Command {
         /// With --once: how long the server must be quiet, in milliseconds
         #[arg(long, value_name = "MS", default_value_t = 500)]
         settle: u64,
+    },
+    /// Shows the tree in the terminal, interactive, with the history of the flow to go back in
+    #[command(visible_alias = "tui", after_help = UI_HELP)]
+    Ui {
+        #[command(flatten)]
+        target: Target,
     },
     /// Fires an action, then prints it and what the server sends back
     #[command(after_help = ACTION_EXAMPLES)]
@@ -381,6 +391,32 @@ Examples:
   cop replay flow.cop --each
   cop replay flow.cop --until 12 --json";
 
+const UI_HELP: &str = "\
+The page is what `cop tree` prints, with the controls usable as in a wallet: type
+into inputs, press buttons, toggle checkboxes, change selects, sliders and tabs.
+Bound signals are written and handlers run as a wallet would; the page changes in
+place as the server sends.
+
+The sidebar is the history: every message both ways, each kept with the signals
+the client held at that moment (• marks the entries where they changed). Going
+to an entry rebuilds the page as it was right after it, from scratch, and stays
+there, read-only, as new messages arrive, until `live` is chosen again.
+
+Keys:
+  ↑ ↓ Tab           move between controls
+  Enter Space       press a button, edit an input, toggle a checkbox
+  ← →               change a select, slider or tabs
+  Esc               stop editing; otherwise back to live
+  [ ]  (or p n)     one step back or forward in the history
+  Home End          the first entry; live
+  a s               show all attributes; show the signals
+  PgUp PgDn         scroll
+  q  Ctrl+C         quit
+The mouse works too: click rows, options, tabs and slider bars, and the history.
+
+Example:
+  cop ui <uri> --record flow.cop";
+
 const CHECK_EXAMPLES: &str = "\
 Examples:
   cop check flow.cop
@@ -569,6 +605,12 @@ fn main() -> ExitCode {
             once,
             settle,
         }) => tree_cmd(&target, idle, debounce, once, settle, g),
+        Some(Command::Ui { target }) => (|| {
+            if !std::io::stdout().is_terminal() {
+                return Err("cop ui needs a terminal; `cop tree` prints the same".to_string());
+            }
+            ui::run(connect_quiet(&target, Echo::Off, false)?, g.max_text)
+        })(),
         Some(Command::Action {
             target,
             name,
@@ -764,6 +806,12 @@ fn make_hello(
 }
 
 fn connect(t: &Target, echo: Echo) -> Result<Session, String> {
+    connect_quiet(t, echo, t.verbose)
+}
+
+/// [`connect`], with the session's own printing on standard error only if
+/// `verbose`.
+fn connect_quiet(t: &Target, echo: Echo, verbose: bool) -> Result<Session, String> {
     let address = t.address.as_deref().unwrap_or_default();
     let (mut uri, _) = resolve(address, true, t.verbose)?;
     if let Some(r) = &t.relay {
@@ -785,7 +833,7 @@ fn connect(t: &Target, echo: Echo) -> Result<Session, String> {
         token,
         key: t.key,
         record,
-        verbose: t.verbose,
+        verbose,
         echo,
     }))
 }

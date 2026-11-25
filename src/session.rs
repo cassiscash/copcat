@@ -5,8 +5,10 @@
 //! received can be echoed (`> ` and `< `, the transcript format) and
 //! recorded to a file.
 
+use crate::history::History;
 use crate::link::{self, Event, Link};
 use crate::page::Page;
+use crate::transcript::Dir;
 use crate::uri::CopUri;
 use hypereffect::signals::{merge_patch, strip_local_map};
 use hypereffect::{Action, LineBuffer, Map, RendererMessage, Value, json};
@@ -42,6 +44,10 @@ pub struct Session {
     closed: Option<Option<String>>,
     record: Option<File>,
     verbose: bool,
+    /// Every message both ways with the signals of the moment, if kept.
+    pub history: Option<History>,
+    /// Where diagnostics and notes go instead of standard error, if set.
+    pub notes: Option<Vec<String>>,
 }
 
 /// How [`Session::settle`] ended.
@@ -114,6 +120,8 @@ impl Session {
             closed: None,
             record: o.record,
             verbose: o.verbose,
+            history: None,
+            notes: None,
         }
     }
 
@@ -127,6 +135,30 @@ impl Session {
         }
     }
 
+    /// Applies a line from the server, keeping it.
+    fn apply(&mut self, line: &str) {
+        self.record('<', line);
+        self.page.receive_line(line);
+        self.remember(Dir::Server, line);
+    }
+
+    /// Adds a line just sent or applied to the history, if one is kept.
+    fn remember(&mut self, dir: Dir, line: &str) {
+        let t = self.elapsed();
+        if let Some(h) = &mut self.history {
+            h.push(t, dir, line, self.page.client.signals());
+        }
+    }
+
+    /// A note for the user: kept in [`notes`](Self::notes) if set, printed
+    /// to standard error otherwise.
+    fn note(&mut self, message: String) {
+        match &mut self.notes {
+            Some(n) => n.push(message),
+            None => eprintln!("cop: {message}"),
+        }
+    }
+
     /// Waits until the server sends a line or the flow ends, or until
     /// `deadline` (forever without one), which returns `None`. The line is
     /// applied to the page first. Once the flow has ended this returns
@@ -134,8 +166,7 @@ impl Session {
     pub fn next_line(&mut self, deadline: Option<Instant>) -> Option<Received> {
         loop {
             if let Some(line) = self.pending.pop_front() {
-                self.record('<', &line);
-                self.page.receive_line(&line);
+                self.apply(&line);
                 self.report();
                 return Some(Received::Line(line));
             }
@@ -161,10 +192,10 @@ impl Session {
             match ev {
                 Event::Open { client, elapsed } => {
                     if self.verbose {
-                        eprintln!(
-                            "cop: connected as {client} in {:.2}s",
+                        self.note(format!(
+                            "connected as {client} in {:.2}s",
                             elapsed.as_secs_f64()
-                        );
+                        ));
                     }
                     if self.echo == Echo::Json {
                         crate::out(&format!(
@@ -201,8 +232,7 @@ impl Session {
         };
         let mut lines = vec![first];
         while let Some(line) = self.pending.pop_front() {
-            self.record('<', &line);
-            self.page.receive_line(&line);
+            self.apply(&line);
             lines.push(line);
         }
         self.report();
@@ -237,6 +267,7 @@ impl Session {
             )),
         }
         self.record('>', &line);
+        self.remember(Dir::Client, &line);
         self.link.send(line);
     }
 
@@ -276,7 +307,7 @@ impl Session {
     pub fn trigger(&mut self, id: &str, event: &str) -> bool {
         let line = self.page.client.trigger(id, event);
         for url in self.page.client.take_opens() {
-            eprintln!("cop: {id}.{event} asks to open {url}");
+            self.note(format!("{id}.{event} asks to open {url}"));
         }
         self.report();
         match line {
@@ -295,13 +326,18 @@ impl Session {
         self.send(hypereffect::message::encode_line("invoice", &body));
     }
 
-    /// Prints the page's diagnostics, if asked to.
+    /// Prints the page's diagnostics, if asked to, or keeps them in
+    /// [`notes`](Self::notes).
     pub fn report(&mut self) {
         let diags = self.page.take_diagnostics();
-        if self.verbose {
-            for d in diags {
-                eprintln!("cop: {d}");
+        match &mut self.notes {
+            Some(n) => n.extend(diags),
+            None if self.verbose => {
+                for d in diags {
+                    eprintln!("cop: {d}");
+                }
             }
+            None => {}
         }
     }
 }

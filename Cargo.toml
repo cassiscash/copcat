@@ -18,5 +18,7 @@ hypereffect = "0.7.0"
 iroh = "1"
 qrcode = { version = "0.14", default-features = false }
 rand = "0.8"
+ratatui = "0.30"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
 tokio = { version = "1", features = ["rt-multi-thread", "sync", "time", "macros", "io-util"] }
+unicode-width = "0.2"
